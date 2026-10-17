@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/supabase_config.dart';
 
 /// Social authentication buttons styled to match the Root N Branch identity.
-///
-/// NOTE: As per guidelines, third-party authentication is not yet configured.
-/// Tapping displays a clear notification that the provider is unavailable.
 class SocialLoginButtons extends StatelessWidget {
-  const SocialLoginButtons({super.key});
+  /// Callback when user taps Google Sign-In.
+  final VoidCallback? onGoogleTap;
+
+  /// Whether a Google OAuth sign-in request is actively in progress.
+  final bool isGoogleLoading;
+
+  const SocialLoginButtons({
+    super.key,
+    this.onGoogleTap,
+    this.isGoogleLoading = false,
+  });
 
   void _onSocialTap(BuildContext context, String provider) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -44,6 +52,8 @@ class SocialLoginButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isGoogleAvailable = SupabaseConfig.isInitialized;
+
     return Column(
       children: [
         Row(
@@ -77,7 +87,17 @@ class SocialLoginButtons extends StatelessWidget {
               label: 'Google',
               icon: Icons.g_mobiledata_rounded,
               iconSize: 32,
-              onTap: () => _onSocialTap(context, 'Google'),
+              isLoading: isGoogleLoading,
+              isAvailable: isGoogleAvailable,
+              onTap: isGoogleLoading
+                  ? () {}
+                  : () {
+                      if (!isGoogleAvailable || onGoogleTap == null) {
+                        _onSocialTap(context, 'Google');
+                      } else {
+                        onGoogleTap!();
+                      }
+                    },
             ),
             const SizedBox(width: 16),
             // Apple Button
@@ -86,6 +106,8 @@ class SocialLoginButtons extends StatelessWidget {
               label: 'Apple',
               icon: Icons.apple_rounded,
               iconSize: 26,
+              isLoading: false,
+              isAvailable: false,
               onTap: () => _onSocialTap(context, 'Apple'),
             ),
           ],
@@ -100,10 +122,16 @@ class SocialLoginButtons extends StatelessWidget {
     required IconData icon,
     required double iconSize,
     required VoidCallback onTap,
+    bool isLoading = false,
+    bool isAvailable = false,
   }) {
+    final semanticLabel = isLoading
+        ? 'Signing in with $label'
+        : (isAvailable ? '$label login' : '$label login (currently unavailable)');
+
     return Semantics(
       button: true,
-      label: '$label login (currently unavailable)',
+      label: semanticLabel,
       child: Container(
         width: 84,
         height: 50,
@@ -124,10 +152,21 @@ class SocialLoginButtons extends StatelessWidget {
             side: const BorderSide(color: AppColors.subtleBorder, width: 1.2),
           ),
           child: InkWell(
-            onTap: onTap,
+            onTap: isLoading ? null : onTap,
             borderRadius: BorderRadius.circular(16),
             child: Center(
-              child: Icon(icon, size: iconSize, color: AppColors.primaryText),
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.primaryPurple,
+                        ),
+                      ),
+                    )
+                  : Icon(icon, size: iconSize, color: AppColors.primaryText),
             ),
           ),
         ),

@@ -2,19 +2,41 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../core/supabase_config.dart';
 import '../../auth/presentation/login_screen.dart';
 import '../../onboarding/presentation/widgets/root_n_branch_logo.dart';
 
 /// Screen G — Temporary Home Screen Placeholder.
 ///
-/// NOTE: Displayed after customer account creation demonstration.
+/// NOTE: Displayed after customer account creation demonstration and
+/// successful Supabase authentication.
 /// In Phase 2, this will be replaced with the real customer dashboard,
 /// service discovery, stylist booking, and appointment management.
 class HomePlaceholderScreen extends StatelessWidget {
   const HomePlaceholderScreen({super.key});
 
+  Future<void> _handleLogout(BuildContext context) async {
+    if (SupabaseConfig.isInitialized) {
+      try {
+        await SupabaseConfig.client.auth.signOut();
+      } catch (_) {
+        // Silently handle any signout network errors during navigation
+      }
+    }
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = SupabaseConfig.isInitialized
+        ? SupabaseConfig.client.auth.currentUser
+        : null;
+
     return Scaffold(
       backgroundColor: AppColors.softBackground,
       appBar: AppBar(
@@ -36,12 +58,7 @@ class HomePlaceholderScreen extends StatelessWidget {
               color: AppColors.primaryPurple,
             ),
             tooltip: 'Log Out',
-            onPressed: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
+            onPressed: () => _handleLogout(context),
           ),
         ],
       ),
@@ -100,6 +117,33 @@ class HomePlaceholderScreen extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      if (user?.email != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.lightLavender.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: AppColors.primaryPurple.withValues(
+                                alpha: 0.2,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            user!.email!,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.darkPurple,
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       Text(
                         'Phase 1: Authentication UI & Navigation is complete.\n\n'
@@ -122,12 +166,7 @@ class HomePlaceholderScreen extends StatelessWidget {
                   width: double.infinity,
                   height: 52,
                   child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        (route) => false,
-                      );
-                    },
+                    onPressed: () => _handleLogout(context),
                     icon: const Icon(
                       Icons.arrow_back_rounded,
                       color: AppColors.primaryPurple,
