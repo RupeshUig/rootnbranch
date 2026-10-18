@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -24,6 +25,28 @@ abstract final class SupabaseConfig {
     'SUPABASE_AUTH_CALLBACK_URL',
     defaultValue: defaultRedirectUrl,
   );
+
+  /// Safe OAuth redirect URL for the active platform.
+  ///
+  /// On Web:
+  /// - Returns [authCallbackUrl] only if explicitly provided via `--dart-define`
+  ///   and not using an Android deep-link scheme.
+  /// - Otherwise returns `null`, allowing Supabase Auth to redirect back to the
+  ///   Site URL configured in the Supabase Dashboard.
+  ///
+  /// On Native (Android, iOS, etc.):
+  /// - Returns [authCallbackUrl] (defaulting to the Android package deep link).
+  static String? get oauthRedirectUrl {
+    if (kIsWeb) {
+      const customUrl = String.fromEnvironment('SUPABASE_AUTH_CALLBACK_URL');
+      if (customUrl.trim().isNotEmpty &&
+          !customUrl.startsWith('com.rootnbranch.')) {
+        return customUrl.trim();
+      }
+      return null;
+    }
+    return authCallbackUrl;
+  }
 
   /// Whether both required Supabase configuration values are present and non-empty.
   static bool get isConfigured =>

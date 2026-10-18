@@ -106,5 +106,10 @@ void main() {
       );
       expect(SupabaseConfig.authCallbackUrl, isNotEmpty);
     });
+
+    test('oauthRedirectUrl returns platform appropriate redirect URL', () {
+      // In native test environment, returns authCallbackUrl
+      expect(SupabaseConfig.oauthRedirectUrl, equals(SupabaseConfig.authCallbackUrl));
+    });
   });
 }

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -44,10 +43,24 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
 
     // If Supabase is initialized, listen to real-time auth events (e.g. OAuth redirect callback)
     if (SupabaseConfig.isInitialized) {
+      if (SupabaseConfig.client.auth.currentSession != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomePlaceholderScreen()),
+              (route) => false,
+            );
+          }
+        });
+      }
+
       _authSubscription =
           SupabaseConfig.client.auth.onAuthStateChange.listen((data) {
         final AuthChangeEvent event = data.event;
-        if (event == AuthChangeEvent.signedIn && mounted) {
+        if ((event == AuthChangeEvent.signedIn ||
+                event == AuthChangeEvent.initialSession) &&
+            data.session != null &&
+            mounted) {
           setState(() {
             _isGoogleLoading = false;
           });
@@ -164,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
     try {
       final success = await SupabaseConfig.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? null : SupabaseConfig.authCallbackUrl,
+        redirectTo: SupabaseConfig.oauthRedirectUrl,
       );
 
       if (!success && mounted) {
